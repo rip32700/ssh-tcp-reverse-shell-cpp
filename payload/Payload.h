@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include "libssh/libssh.h"
+#include "utils.h"
 
 class Payload {
 
@@ -23,6 +24,9 @@ private:
     bool openChannel();
     void sendMsg(const std::string&);
     std::string rcvMsg();
+    void upload(std::string&, std::string&);
+    void download(std::string&, std::string&);
+    std::string execCmd(std::string&);
 
 public:
     Payload();
