@@ -179,7 +179,11 @@ std::string Payload::execCmd(std::string& cmd)
 {
     std::array<char, 128> buffer{};
     std::string result;
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    std::unique_ptr<FILE, decltype(&_pclose)> pipe(_popen(cmd.c_str(), "r"), _pclose);
+#else
     std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
+#endif
     if (!pipe)
     {
         std::cerr << "[-] Cmd execution failed\n";
