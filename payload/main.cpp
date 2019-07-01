@@ -1,7 +1,11 @@
 #include <iostream>
 #include "libssh/libssh.h"
+#include "Payload.h"
 
-int main() {
-    std::cout << "Hello, Payload!" << std::endl;
+int main()
+{
+    Payload payload;
+    payload.connect();
+
     return 0;
 }

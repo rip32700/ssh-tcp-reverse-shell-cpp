@@ -1,7 +1,10 @@
 #include <iostream>
-#include "libssh/libssh.h"
+#include "C2Server.h"
 
-int main() {
-    std::cout << "Hello, C2!" << std::endl;
+int main()
+{
+    C2Server c2;
+    c2.start();
+
     return 0;
 }
