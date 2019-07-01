@@ -230,7 +230,7 @@ void C2Server::sendMsg(const std::string& msg)
 
 std::string C2Server::rcvMsg()
 {
-    char buffer[1024] { 0 };
+    char buffer[50000] { 0 };
     if ((ssh_channel_read(channel, buffer, sizeof(buffer), 0)) <= 0)
     {
         std::cerr << "[-] Error while reading from channel\n";

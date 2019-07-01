@@ -6,8 +6,13 @@
 #define SSH_TCP_REVERSE_SHELL_CPP_PAYLOAD_H
 
 #include <iostream>
+#include <cstdio>
+#include <memory>
+#include <string>
+#include <array>
 #include "libssh/libssh.h"
 #include "utils.h"
+
 
 class Payload {
 
@@ -33,7 +38,6 @@ public:
     ~Payload();
 
     void connect();
-
 };
 
 
