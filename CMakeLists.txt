@@ -5,11 +5,15 @@ set(CMAKE_CXX_STANDARD 17)
 
 include_directories(
         /usr/local/Cellar/libssh/0.8.6/include/
+        utils/
 )
 
 add_library(libssh SHARED IMPORTED GLOBAL)
-set_property(
-        TARGET libssh PROPERTY IMPORTED_LOCATION /usr/local/Cellar/libssh/0.8.6/lib/libssh.dylib
+set_property(TARGET libssh PROPERTY IMPORTED_LOCATION /usr/local/Cellar/libssh/0.8.6/lib/libssh.dylib)
+
+add_library(libutils
+        utils/utils.h
+        utils/utils.cpp
 )
 
 # PAYLOAD
@@ -18,12 +22,8 @@ add_executable(payload
         payload/main.cpp
         payload/Payload.h
         payload/Payload.cpp
-        payload/utils.h
-        payload/utils.cpp
 )
-target_link_libraries(payload
-        libssh
-)
+target_link_libraries(payload PRIVATE libssh libutils)
 
 # C2
 
@@ -31,10 +31,5 @@ add_executable(c2
         c2/main.cpp
         c2/C2Server.h
         c2/C2Server.cpp
-        c2/utils.h
-        c2/utils.cpp
-        )
-
-target_link_libraries(c2
-        libssh
 )
+target_link_libraries(c2 PRIVATE libssh libutils)
