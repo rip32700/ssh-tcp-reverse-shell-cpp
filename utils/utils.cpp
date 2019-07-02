@@ -5,7 +5,8 @@
 #include "utils.h"
 
 
-bool startsWith(const std::string& s, const std::string& prefix) {
+bool startsWith(const std::string& s, const std::string& prefix)
+{
     return s.size() >= prefix.size() && s.compare(0, prefix.size(), prefix) == 0;
 }
 
