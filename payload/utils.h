@@ -7,9 +7,12 @@
 
 #include <iostream>
 #include <vector>
-
+#include <sys/stat.h>
+#include <fstream>
 
 bool startsWith(const std::string&, const std::string&);
-std::vector<std::string> tokenize(std::string&);
+std::vector<std::string> tokenize(std::string);
+bool dirExists(std::string);
+std::string readFile(std::string);
 
 #endif //SSH_TCP_REVERSE_SHELL_CPP_UTILS_H

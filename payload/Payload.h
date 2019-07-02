@@ -10,9 +10,14 @@
 #include <memory>
 #include <string>
 #include <array>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <fstream>
 #include "libssh/libssh.h"
+#include "libssh/sftp.h"
 #include "utils.h"
 
+#define MAX_BUFF_SIZE 50000
 
 class Payload {
 
@@ -29,6 +34,7 @@ private:
     bool openChannel();
     void sendMsg(const std::string&);
     std::string rcvMsg();
+    sftp_session setupSFTP();
     void upload(std::string&, std::string&);
     void download(std::string&, std::string&);
     std::string execCmd(std::string&);
