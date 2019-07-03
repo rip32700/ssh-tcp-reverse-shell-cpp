@@ -33,3 +33,13 @@ add_executable(c2
         c2/C2Server.cpp
 )
 target_link_libraries(c2 PRIVATE libssh libutils)
+
+# C version payload
+add_executable(c-version-payload
+        c-version-payload/main.c
+        c-version-payload/payload.h
+        c-version-payload/payload.c
+        c-version-payload/utils.c
+        c-version-payload/utils.h
+)
+target_link_libraries(c-version-payload PRIVATE libssh)

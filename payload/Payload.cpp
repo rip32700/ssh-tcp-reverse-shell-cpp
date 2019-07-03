@@ -13,7 +13,7 @@ Payload::Payload()
     if (session == nullptr)
     {
         std::cerr << "[-] Couldn't create SSH session\n";
-        exit(-1);
+        exit(EXIT_FAILURE);
     }
     // configure the session
     ssh_options_set(session, SSH_OPTIONS_HOST, host.c_str());
@@ -259,7 +259,7 @@ void Payload::download(std::string& remoteFilePath, std::string& localFilePath)
     sftp_file file = sftp_open(sftp, remoteFilePath.c_str(), O_RDONLY, S_IRWXU);
     if (file == nullptr)
     {
-        std::cerr << "[-] Can't open file for writing: " << ssh_get_error(session) << std::endl;
+        std::cerr << "[-] Can't open file: " << ssh_get_error(session) << std::endl;
         sftp_free(sftp);
         return;
     }
