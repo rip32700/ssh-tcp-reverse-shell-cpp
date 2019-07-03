@@ -23,6 +23,7 @@ void tokenize(char*, const char*, char**);
 char* concat(const char*, const char*);
 
 int dirExists(char *);
+char* readFile(FILE*, int*);
 
 
 void initArray(Array*, size_t);

@@ -33,7 +33,6 @@ void Payload::connect()
     if (returnCode != SSH_OK)
     {
         std::cerr << "[-] Error connecting to " << host << " : " << ssh_get_error(session) << std::endl;
-        tearDown();
         return;
     }
 
@@ -241,7 +240,11 @@ void Payload::download(std::string& remoteFilePath, std::string& localFilePath)
     auto dirName = "downloads";
     if (!dirExists(dirName))
     {
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+        if (_mkdir(dirName) == -1)
+#else
         if (mkdir(dirName, 0777) == -1)
+#endif
         {
             std::cout << "[-] Error creating uploads directory!\n";
         }
@@ -312,6 +315,11 @@ std::string Payload::execCmd(std::string& cmd)
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr)
     {
         result += buffer.data();
+    }
+
+    if (result.empty())
+    {
+        result = "No output";
     }
 
     return result;

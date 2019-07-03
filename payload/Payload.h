@@ -17,6 +17,10 @@
 #include "libssh/sftp.h"
 #include "utils.h"
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#include <direct.h>
+#endif
+
 #define MAX_BUFF_SIZE 50000
 
 class Payload {

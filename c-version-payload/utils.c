@@ -67,3 +67,39 @@ int dirExists(char *path)
         return (info.st_mode & S_IFDIR) != 0;
     }
 }
+
+char* readFile(FILE* fp, int* length)
+{
+    char *source = NULL;
+    if (fp != NULL)
+    {
+        /* Go to the end of the file. */
+        if (fseek(fp, 0L, SEEK_END) == 0)
+        {
+            /* Get the size of the file. */
+            long bufsize = ftell(fp);
+            if (bufsize == -1)
+            {
+                fprintf(stderr, "[-] Error reading file length\n");
+            }
+
+            /* Allocate our buffer to that size. */
+            *length = sizeof(char) * (bufsize + 1);
+            source = malloc(sizeof(char) * (bufsize + 1));
+
+            /* Go back to the start of the file. */
+            if (fseek(fp, 0L, SEEK_SET) != 0) { /* Error */ }
+
+            /* Read the entire file into memory. */
+            size_t newLen = fread(source, sizeof(char), bufsize, fp);
+            if ( ferror( fp ) != 0 )
+            {
+                fprintf(stderr, "[-] Error reading file\n", stderr);
+            } else {
+                source[newLen++] = '\0'; /* Just to be safe. */
+            }
+        }
+    }
+
+    return source;
+}
