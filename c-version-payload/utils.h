@@ -22,7 +22,7 @@ int startsWith(const char*, const char*);
 void tokenize(char*, const char*, char**);
 char* concat(const char*, const char*);
 
-int dirExists(char *);
+int dirExists(const char *);
 char* readFile(FILE*, int*);
 
 

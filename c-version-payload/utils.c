@@ -28,7 +28,7 @@ void tokenize(char* string, const char* delimiters, char** tokens)
 
 char* concat(const char *s1, const char *s2)
 {
-    char *result = malloc(strlen(s1) + strlen(s2) + 1); // +1 for the null-terminator
+    char *result = (char*) malloc(strlen(s1) + strlen(s2) + 1); // +1 for the null-terminator
     strcpy(result, s1);
     strcat(result, s2);
     return result;
@@ -54,7 +54,7 @@ void freeArray(Array* a) {
     a->used = a->size = 0;
 }
 
-int dirExists(char *path)
+int dirExists(const char *path)
 {
     struct stat info;
 
@@ -85,7 +85,7 @@ char* readFile(FILE* fp, int* length)
 
             /* Allocate our buffer to that size. */
             *length = sizeof(char) * (bufsize + 1);
-            source = malloc(sizeof(char) * (bufsize + 1));
+            source = (char*) malloc(sizeof(char) * (bufsize + 1));
 
             /* Go back to the start of the file. */
             if (fseek(fp, 0L, SEEK_SET) != 0) { /* Error */ }

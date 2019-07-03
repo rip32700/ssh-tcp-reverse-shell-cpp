@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include "payload.h"
 
-#include "utils.h"
-
 int main()
 {
     setupSSH();
